@@ -41,14 +41,18 @@ inputs.par_low = par_lower;
 inputs.par_upp = par_upper;
 inputs.burnin = burnin;
 
+% Set this to 1 if you want to estimate the measurement error as a
+% hyperparameter
+inputs.update_sig = 0;
+
 % If you want a Gaussian prior, uncomment
 % inputs.prior = 'Gaussian';
 % inputs.thetamu  = par_guess;
 % inputs.thetasig = 0.5.*par_guess;
 
 % Choose between Metropolis-Hastings or Adaptive Metropolis
-chain = MH_Algorithm(inputs);
-% chain = AM_Algorithm(inputs);
+[chain,s2chain] = MH_Algorithm(inputs);
+% [chain,s2chain] = AM_Algorithm(inputs);
 
 % Throw away the "burnin" period
 chain = chain(burnin+1:end,:);

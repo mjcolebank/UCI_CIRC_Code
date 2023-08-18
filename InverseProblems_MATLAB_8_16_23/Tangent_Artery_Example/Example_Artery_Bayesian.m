@@ -17,17 +17,17 @@ Ptrue = Arterial_Model(Dspace,param_true,Dref);
 data_ids = 1:5:npts; Ddata = Dspace(data_ids); Pdata_clean = Ptrue(data_ids);
 
 % Take the clean add Gaussian noise with a fixed error variance
-noise_var = 1; Pdata_noisy = Pdata_clean+normrnd(0,noise_var,1,length(data_ids));
+noise_var = 3; Pdata_noisy = Pdata_clean+normrnd(0,noise_var,1,length(data_ids));
 
 %% C) Consider model calibration
 % Create an in-line function handle
 par_upper = [60 1  120]; %Upper bound
 par_lower = [20 0.01 20];  %Lower bound
-par_guess = [20 0.45  90];   %Initial Guess
+par_guess = [20 0.40  90];   %Initial Guess
 RSS_func = @(q) RSS_Artery(q,Pdata_noisy,Dspace,Dref,data_ids);
 
 % If feasible, optimize once first
-% [par_guess,RSSopt] = fmincon(RSS_func,par_guess,[],[],[],[],par_lower,par_upper);
+[par_guess,RSSopt] = fmincon(RSS_func,par_guess,[],[],[],[],par_lower,par_upper);
 
 N_par = length(par_guess);
 N_data = length(Pdata_noisy);
@@ -36,7 +36,7 @@ burnin = 1000;
 noise_est = RSS_Artery(par_guess,Pdata_noisy,Dspace,Dref,data_ids)./(N_data-N_par);
 % noise_est = 5000;
 inputs.par0 = par_guess;
-inputs.nsamp = 10000;
+inputs.nsamp = 50000;
 inputs.ss_fun = @(q,data) RSS_Artery(q,data,Dspace,Dref,data_ids);
 inputs.data   = Pdata_noisy;
 inputs.measurement_noise = noise_est;
@@ -44,14 +44,18 @@ inputs.par_low = par_lower;
 inputs.par_upp = par_upper;
 inputs.burnin = burnin;
 
+% Set this to 1 if you want to estimate the measurement error as a
+% hyperparameter
+inputs.update_sig = 0;
+
 % If you want a Gaussian prior, uncomment
 % inputs.prior = 'Gaussian';
 % inputs.thetamu  = par_guess;
 % inputs.thetasig = 0.5.*par_guess;
 
 % Choose between Metropolis-Hastings or Adaptive Metropolis
-chain = MH_Algorithm(inputs);
-% chain = AM_Algorithm(inputs);
+[chain,s2chain] = MH_Algorithm(inputs);
+% [chain,s2chain] = AM_Algorithm(inputs);
 
 % Throw away the "burnin" period
 chain = chain(burnin+1:end,:);

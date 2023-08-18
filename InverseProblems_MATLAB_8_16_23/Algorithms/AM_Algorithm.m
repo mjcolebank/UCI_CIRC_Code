@@ -1,6 +1,6 @@
 % Adaptive Metropolis
 
-function par_chain = AM_Algorithm(inputs)
+function [par_chain,s2chain] = AM_Algorithm(inputs)
 param0 = inputs.par0;
 num_samples = inputs.nsamp;
 ssfun = inputs.ss_fun; %should take pars and data
@@ -8,6 +8,7 @@ data  = inputs.data;
 sig2 = inputs.measurement_noise;
 par_low = inputs.par_low;
 par_upp = inputs.par_upp;
+update_sig = inputs.update_sig;
 
 if isfield(inputs,'adaptint')
     adapt_int = inputs.adaptint;
@@ -21,6 +22,9 @@ else
     burnin = 1000;
 end
 
+% For when we updated the variance estimates
+a_noiseVar = 0.001; b_noiseVar = 0.001;
+n_data = length(data);
 
 % Keep count of rejections
 rejout = 0;
@@ -54,7 +58,11 @@ end
 ss_old    = ssfun(oldpar,data);
 prior_old  = priorfun(oldpar,thetamu,thetasig);
 par_chain = zeros(num_samples,num_par);
-
+if update_sig
+    s2chain = zeros(num_samples,1);
+else
+    s2chain = [];
+end
 % We need a proposal distribution: assume Gaussian with covariance
 % propotional to the parameter values
 qcov = diag((0.05.*param0).^2);
@@ -120,6 +128,16 @@ for i=2:num_samples
             end
             last_cov_update = i;
         end
+    end
+
+    % Update error variance
+    if update_sig
+%                 if i<burnin % sample sigma2 in sampling phase
+%                     s2chain(i) = s2chain(i-1);
+%                 else
+                    s2chain(i) = 1.0/gamrnd(a_noiseVar+0.5*n_data, 1/(b_noiseVar+0.5*ss_old));
+%                 end
+        sig2 = s2chain(i);
     end
     
 end
